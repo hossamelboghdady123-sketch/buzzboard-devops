@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: buzzboard-frontend
+  labels:
+    app: buzzboard-frontend
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: buzzboard-frontend
+
+  template:
+    metadata:
+      labels:
+        app: buzzboard-frontend
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: 623756711845.dkr.ecr.eu-north-1.amazonaws.com/buzzboard-prod-frontend:v1
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 80

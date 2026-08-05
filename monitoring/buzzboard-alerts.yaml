@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: buzzboard-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+
+spec:
+  groups:
+  - name: buzzboard.rules
+
+    rules:
+    - alert: BuzzBoardBackendDown
+      expr: |
+        kube_deployment_status_replicas_available{
+          namespace="default",
+          deployment="buzzboard-backend"
+        } < 1
+
+      for: 1m
+
+      labels:
+        severity: critical
+
+      annotations:
+        summary: "BuzzBoard Backend is down"
+        description: "No available replicas for buzzboard-backend for more than 1 minute."

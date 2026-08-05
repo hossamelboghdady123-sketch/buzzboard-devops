@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: buzzboard-backend
+  labels:
+    app: buzzboard-backend
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: buzzboard-backend
+
+  template:
+    metadata:
+      labels:
+        app: buzzboard-backend
+
+    spec:
+      containers:
+        - name: backend
+          image: 623756711845.dkr.ecr.eu-north-1.amazonaws.com/buzzboard-prod-backend:v1
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080
+
+          livenessProbe:
+            httpGet:
+              path: /api/actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          readinessProbe:
+            httpGet:
+              path: /api/actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://buzzboard-prod-postgres.cxq286g2c50t.eu-north-1.rds.amazonaws.com:5432/postgres"
+
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: buzzboard-db-secret
+                  key: SPRING_DATASOURCE_USERNAME
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: buzzboard-db-secret
+                  key: SPRING_DATASOURCE_PASSWORD
+
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: "/api"
