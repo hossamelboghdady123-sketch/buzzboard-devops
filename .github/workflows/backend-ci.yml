@@ -1,36 +1,38 @@
 name: Backend CI
 
 'on':
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
+push:
+branches:
+- main
+paths:
+- "backend/**"
+- ".github/workflows/backend-ci.yml"
 
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+build:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+```
+steps:
+  - name: Checkout source code
+    uses: actions/checkout@v5
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+  - name: Set up Java
+    uses: actions/setup-java@v5
+    with:
+      distribution: temurin
+      java-version: "17"
+      cache: maven
 
-      - name: Build Backend
-        working-directory: backend
-        run: |
-          chmod +x mvnw
-          ./mvnw clean package -DskipTests
+  - name: Build Backend
+    working-directory: backend
+    run: mvn clean package -DskipTests
 
-      - name: Build Docker image
-        working-directory: backend
-        run: |
-          docker build -t buzzboard-backend:${{ github.sha }} .
+  - name: Build Docker image
+    working-directory: backend
+    run: |
+      docker build -t buzzboard-backend:${{ github.sha }} .
+```
+
