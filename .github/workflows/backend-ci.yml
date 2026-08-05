@@ -36,4 +36,3 @@ steps:
     run: |
       docker build -t buzzboard-backend:${{ github.sha }} .
 ```
-
