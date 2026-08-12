@@ -10,12 +10,21 @@ pool:
   name: Default
 
 steps:
+
+- task: Maven@4
+  displayName: Build Backend JAR
+  inputs:
+    mavenPomFile: 'backend/pom.xml'
+    goals: 'clean package'
+    options: '-DskipTests'
+
 - task: Docker@2
   displayName: Build and Push Docker Image
   inputs:
-    containerRegistry: 'DockerHub-Connection'
+    containerRegistry: 'docker'
     repository: 'hossam789/myapp'
     command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
+    Dockerfile: 'backend/Dockerfile'
+    buildContext: 'backend'
     tags: |
       latest
