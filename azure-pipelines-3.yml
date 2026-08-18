@@ -13,7 +13,7 @@ pr:
 variables:
 
   dockerUsername: 'hossam789'
-
+  DockerRegistry: 'docker'
   frontendImage: 'devops-job-board-frontend'
   backendImage: 'devops-job-board-backend'
 
