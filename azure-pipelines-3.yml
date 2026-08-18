@@ -21,7 +21,7 @@ stages:
     displayName: 'Install Dependencies'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     steps:
     - checkout: self
@@ -60,7 +60,7 @@ stages:
     displayName: 'Frontend Test'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     steps:
     - checkout: self
@@ -97,7 +97,7 @@ stages:
     displayName: 'Backend Test'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     steps:
     - checkout: self
@@ -144,7 +144,7 @@ stages:
     displayName: 'Build Frontend Docker Image'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     steps:
     - checkout: self
@@ -167,7 +167,7 @@ stages:
     displayName: 'Build Backend Docker Image'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     steps:
     - checkout: self
@@ -202,7 +202,7 @@ stages:
     environment: 'production'
 
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'default'
 
     strategy:
       runOnce:
