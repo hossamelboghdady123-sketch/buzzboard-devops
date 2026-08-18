@@ -2,43 +2,28 @@ trigger:
   branches:
     include:
       - main
-      
 
 pr:
   branches:
     include:
       - main
-      
 
 variables:
-
-  dockerUsername: 'hossam789'
-  DockerRegistry: 'docker'
-  frontendImage: 'devops-job-board-frontend'
-  backendImage: 'devops-job-board-backend'
-
-  frontendPath: 'frontend'
-  backendPath: 'backend'
-
-  tag: '$(Build.BuildId)'
+- group: vg-devops-prod
 
 stages:
 
-# ============================================================
-# STAGE 1 - PREREQUISITES
-# ============================================================
-
 - stage: Prerequisites
-  displayName: 'Prerequisites - Install Dependencies'
-  jobs:
+  displayName: '1 - Prerequisites'
 
+  jobs:
   - job: InstallDependencies
     displayName: 'Install Dependencies'
+
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     steps:
-
     - checkout: self
 
     - task: NodeTool@0
@@ -47,56 +32,58 @@ stages:
         versionSpec: '20.x'
 
     - script: |
+        set -e
         echo "Installing frontend dependencies..."
-        cd $(frontendPath)
+        cd "$(frontendPath)"
         npm ci
       displayName: 'Install Frontend Dependencies'
 
     - script: |
+        set -e
         echo "Installing backend dependencies..."
-        cd $(backendPath)
+        cd "$(backendPath)"
         npm ci
       displayName: 'Install Backend Dependencies'
 
 
-# ============================================================
-# STAGE 2 - TEST & LINT
-# ============================================================
-
 - stage: TestAndLint
-  displayName: 'Test and Lint'
-  dependsOn: Prerequisites
+  displayName: '2 - Test and Lint'
+
+  dependsOn:
+    - Prerequisites
+
   condition: succeeded()
 
   jobs:
 
-  # ---------------- FRONTEND ----------------
+  - job: FrontendTest
+    displayName: 'Frontend Test'
 
-  - job: LintAndTestFrontend
-    displayName: 'Lint and Test Frontend'
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     steps:
-
     - checkout: self
 
     - task: NodeTool@0
+      displayName: 'Install Node.js'
       inputs:
         versionSpec: '20.x'
 
     - script: |
-        cd $(frontendPath)
+        set -e
+        cd "$(frontendPath)"
         npm ci
       displayName: 'Install Frontend Dependencies'
 
     - script: |
-        cd $(frontendPath)
+        set -e
+        cd "$(frontendPath)"
         npm run lint
       displayName: 'Frontend Lint'
 
     - script: |
-        cd $(frontendPath)
+        cd "$(frontendPath)"
 
         if npm run | grep -q "test"; then
           npm test -- --run
@@ -106,33 +93,34 @@ stages:
       displayName: 'Frontend Tests'
 
 
-  # ---------------- BACKEND ----------------
+  - job: BackendTest
+    displayName: 'Backend Test'
 
-  - job: LintAndTestBackend
-    displayName: 'Lint and Test Backend'
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     steps:
-
     - checkout: self
 
     - task: NodeTool@0
+      displayName: 'Install Node.js'
       inputs:
         versionSpec: '20.x'
 
     - script: |
-        cd $(backendPath)
+        set -e
+        cd "$(backendPath)"
         npm ci
       displayName: 'Install Backend Dependencies'
 
     - script: |
-        cd $(backendPath)
+        set -e
+        cd "$(backendPath)"
         npm run lint
       displayName: 'Backend Lint'
 
     - script: |
-        cd $(backendPath)
+        cd "$(backendPath)"
 
         if npm run | grep -q "test"; then
           npm test
@@ -142,90 +130,68 @@ stages:
       displayName: 'Backend Tests'
 
 
-# ============================================================
-# STAGE 3 - BUILD & PUSH DOCKER IMAGES
-# ============================================================
-
 - stage: BuildAndPush
-  displayName: 'Build and Push Docker Images'
-  dependsOn: TestAndLint
+  displayName: '3 - Build and Push Docker Images'
+
+  dependsOn:
+    - TestAndLint
+
   condition: succeeded()
 
   jobs:
 
-  # ---------------- FRONTEND IMAGE ----------------
-
   - job: BuildFrontend
     displayName: 'Build Frontend Docker Image'
+
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     steps:
-
     - checkout: self
 
     - task: Docker@2
-      displayName: 'Build Frontend Image'
+      displayName: 'Build and Push Frontend Image'
+
       inputs:
-        command: build
-        repository: '$(dockerRegistry)/$(frontendImage)'
+        command: 'buildAndPush'
+        containerRegistry: 'DockerHubConnection'
+        repository: '$(dockerUsername)/$(frontendImage)'
         dockerfile: '$(frontendPath)/Dockerfile'
         buildContext: '$(frontendPath)'
         tags: |
-          $(tag)
+          $(Build.BuildId)
           latest
 
-    - task: Docker@2
-      displayName: 'Push Frontend Image'
-      inputs:
-        command: push
-        repository: '$(dockerRegistry)/$(frontendImage)'
-        tags: |
-          $(tag)
-          latest
-        containerRegistry: 'DockerRegistryConnection'
-
-
-  # ---------------- BACKEND IMAGE ----------------
 
   - job: BuildBackend
     displayName: 'Build Backend Docker Image'
+
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     steps:
-
     - checkout: self
 
     - task: Docker@2
-      displayName: 'Build Backend Image'
+      displayName: 'Build and Push Backend Image'
+
       inputs:
-        command: build
-        repository: '$(dockerRegistry)/$(backendImage)'
+        command: 'buildAndPush'
+        containerRegistry: 'DockerHubConnection'
+        repository: '$(dockerUsername)/$(backendImage)'
         dockerfile: '$(backendPath)/Dockerfile'
         buildContext: '$(backendPath)'
         tags: |
-          $(tag)
+          $(Build.BuildId)
           latest
 
-    - task: Docker@2
-      displayName: 'Push Backend Image'
-      inputs:
-        command: push
-        repository: '$(dockerRegistry)/$(backendImage)'
-        tags: |
-          $(tag)
-          latest
-        containerRegistry: 'DockerRegistryConnection'
-
-
-# ============================================================
-# STAGE 4 - DEPLOY TO KUBERNETES
-# ============================================================
 
 - stage: DeployToKubernetes
-  displayName: 'Deploy to Kubernetes'
-  dependsOn: BuildAndPush
+  displayName: '4 - Deploy to Kubernetes'
+
+  dependsOn:
+    - BuildAndPush
+
   condition: succeeded()
 
   jobs:
@@ -236,68 +202,84 @@ stages:
     environment: 'production'
 
     pool:
-      vmImage: 'default'
+      vmImage: 'ubuntu-latest'
 
     strategy:
       runOnce:
         deploy:
 
           steps:
-
           - checkout: self
 
           - task: KubernetesManifest@1
             displayName: 'Deploy Backend'
+
             inputs:
-              action: deploy
+              action: 'deploy'
               kubernetesServiceConnection: 'KubernetesConnection'
-              namespace: 'default'
+              namespace: '$(k8sNamespace)'
+
               manifests: |
                 kubernetes/backend/deployment.yaml
                 kubernetes/backend/service.yaml
+
               containers: |
-                $(dockerRegistry)/$(backendImage):$(tag)
+                $(dockerUsername)/$(backendImage):$(Build.BuildId)
+
 
           - task: KubernetesManifest@1
             displayName: 'Deploy Frontend'
+
             inputs:
-              action: deploy
+              action: 'deploy'
               kubernetesServiceConnection: 'KubernetesConnection'
-              namespace: 'default'
+              namespace: '$(k8sNamespace)'
+
               manifests: |
                 kubernetes/frontend/deployment.yaml
                 kubernetes/frontend/service.yaml
+
               containers: |
-                $(dockerRegistry)/$(frontendImage):$(tag)
+                $(dockerUsername)/$(frontendImage):$(Build.BuildId)
+
 
           - script: |
-              echo "Waiting for Kubernetes deployment..."
+              set -e
 
+              echo "Checking Backend..."
               kubectl rollout status deployment/backend \
-                --namespace default \
+                --namespace "$(k8sNamespace)" \
                 --timeout=180s
 
+              echo "Checking Frontend..."
               kubectl rollout status deployment/frontend \
-                --namespace default \
+                --namespace "$(k8sNamespace)" \
                 --timeout=180s
 
-              echo "Deployment completed successfully!"
+              echo "Kubernetes deployment completed."
+
+              kubectl get pods \
+                --namespace "$(k8sNamespace)"
+
+              kubectl get services \
+                --namespace "$(k8sNamespace)"
+
             displayName: 'Verify Kubernetes Deployment'
 
 
-# ============================================================
-# STAGE 5 - DEPLOY TO EC2
-# ============================================================
-
 - stage: DeployToEC2
-  displayName: 'Deploy to EC2 - Docker'
-  dependsOn: BuildAndPush
+  displayName: '5 - Deploy to EC2'
+
+  dependsOn:
+    - DeployToKubernetes
+
   condition: succeeded()
 
   jobs:
 
   - job: DeployEC2
     displayName: 'Deploy Docker Containers to EC2'
+
     pool:
       vmImage: 'ubuntu-latest'
 
@@ -305,20 +287,32 @@ stages:
 
     - task: SSH@0
       displayName: 'Deploy Application to EC2'
+
       inputs:
         sshEndpoint: 'EC2-SSH-Connection'
-        runOptions: inline
+
+        runOptions: 'inline'
+
         inline: |
 
-          echo "Pulling latest images..."
+          set -e
 
-          docker pull $(dockerRegistry)/$(frontendImage):$(tag)
-          docker pull $(dockerRegistry)/$(backendImage):$(tag)
+          echo "Pulling Frontend image..."
+
+          docker pull \
+            $(dockerUsername)/$(frontendImage):$(Build.BuildId)
+
+          echo "Pulling Backend image..."
+
+          docker pull \
+            $(dockerUsername)/$(backendImage):$(Build.BuildId)
 
           echo "Stopping old containers..."
 
           docker stop frontend || true
           docker stop backend || true
+
+          echo "Removing old containers..."
 
           docker rm frontend || true
           docker rm backend || true
@@ -326,15 +320,19 @@ stages:
           echo "Starting Backend..."
 
           docker run -d \
+            --restart unless-stopped \
             --name backend \
             -p 5000:5000 \
-            $(dockerRegistry)/$(backendImage):$(tag)
+            $(dockerUsername)/$(backendImage):$(Build.BuildId)
 
           echo "Starting Frontend..."
 
           docker run -d \
+            --restart unless-stopped \
             --name frontend \
             -p 80:80 \
-            $(dockerRegistry)/$(frontendImage):$(tag)
+            $(dockerUsername)/$(frontendImage):$(Build.BuildId)
 
-          echo "EC2 deployment completed!"
+          echo "EC2 Deployment Completed."
+
+          docker ps
